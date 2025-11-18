@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DISHES, CATEGORIES } from '@/lib/data';
@@ -13,30 +13,28 @@ function MenuContent() {
   const router = useRouter();
 
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-1');
-  let currentCategory = searchParams.get('category');
-  let table = searchParams.get('table');
+  const currentCategory = searchParams.get('category') || CATEGORIES[0].id;
+  const table = searchParams.get('table');
 
-  if (!currentCategory) {
-    currentCategory = CATEGORIES[0].id;
-  }
-  
-  if (!table) {
-    if (typeof window !== 'undefined') {
+  useEffect(() => {
+    if (table) {
+      localStorage.setItem('tableNumber', table);
+    } else {
       const storedTable = localStorage.getItem('tableNumber');
       if (storedTable) {
-        table = storedTable;
-        router.replace(`/?table=${table}&category=${currentCategory}#menu`);
+        // Re-add table to URL if it's in storage but not in params
+        router.replace(`/?table=${storedTable}&category=${currentCategory}#menu`);
       } else {
+        // Redirect to scan if no table in params or storage
         router.replace('/scan');
-        return null;
       }
     }
-  } else {
-     if (typeof window !== 'undefined') {
-        localStorage.setItem('tableNumber', table);
-     }
+  }, [table, router, currentCategory]);
+  
+  // Don't render anything until the effect has run and determined the correct path
+  if (!table && typeof window !== 'undefined' && !localStorage.getItem('tableNumber')) {
+    return null; // Or a loading spinner
   }
-
 
   const filteredDishes = DISHES.filter(
     (dish) => dish.categoryId === currentCategory
