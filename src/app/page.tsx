@@ -1,16 +1,42 @@
+'use client';
+
+import { Suspense } from 'react';
 import Image from 'next/image';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { DISHES, CATEGORIES } from '@/lib/data';
 import { DishCard } from '@/components/menu/dish-card';
 import { CategoryCarousel } from '@/components/menu/category-carousel';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-export default function Home({
-  searchParams,
-}: {
-  searchParams?: { category?: string };
-}) {
+function MenuContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-1');
-  const currentCategory = searchParams?.category || CATEGORIES[0].id;
+  let currentCategory = searchParams.get('category');
+  let table = searchParams.get('table');
+
+  if (!currentCategory) {
+    currentCategory = CATEGORIES[0].id;
+  }
+  
+  if (!table) {
+    if (typeof window !== 'undefined') {
+      const storedTable = localStorage.getItem('tableNumber');
+      if (storedTable) {
+        table = storedTable;
+        router.replace(`/?table=${table}&category=${currentCategory}#menu`);
+      } else {
+        router.replace('/scan');
+        return null;
+      }
+    }
+  } else {
+     if (typeof window !== 'undefined') {
+        localStorage.setItem('tableNumber', table);
+     }
+  }
+
 
   const filteredDishes = DISHES.filter(
     (dish) => dish.categoryId === currentCategory
@@ -48,7 +74,7 @@ export default function Home({
           </h2>
           <CategoryCarousel
             categories={CATEGORIES}
-            currentCategory={currentCategory}
+            currentCategory={currentCategory!}
           />
           {filteredDishes.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 mt-10">
@@ -63,4 +89,13 @@ export default function Home({
       </section>
     </div>
   );
+}
+
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MenuContent />
+    </Suspense>
+  )
 }

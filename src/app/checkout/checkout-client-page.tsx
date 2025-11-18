@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/cart/cart-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -12,10 +12,19 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 function CheckoutLogic() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { state, dispatch } = useCart();
   const { toast } = useToast();
-  const tableNumber = searchParams.get('table');
+  const [tableNumber, setTableNumber] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedTable = localStorage.getItem('tableNumber');
+    if (storedTable) {
+      setTableNumber(storedTable);
+    } else {
+       router.push('/scan');
+    }
+  }, [router]);
+
 
   const { items } = state;
   const subtotal = items.reduce((sum, item) => sum + item.dish.price * item.quantity, 0);
@@ -44,6 +53,21 @@ function CheckoutLogic() {
 
     router.push(`/order/${orderId}?table=${tableNumber}`);
   };
+  
+    if (!tableNumber) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center h-64">
+        <Alert variant="destructive" className="max-w-sm">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Missing Table Number</AlertTitle>
+          <AlertDescription>
+            Redirecting you to scan your table's QR code...
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
 
   return (
     <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -73,15 +97,6 @@ function CheckoutLogic() {
             <CardTitle className="font-headline">Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!tableNumber && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Missing Table Number</AlertTitle>
-                <AlertDescription>
-                  Please scan your table's QR code.
-                </AlertDescription>
-              </Alert>
-            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Table</span>
               <span className="font-bold text-2xl text-primary">{tableNumber || '?'}</span>

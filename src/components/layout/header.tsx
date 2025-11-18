@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ShoppingCart, User } from 'lucide-react';
+import { ShoppingCart, User, QrCode } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/components/cart/cart-provider';
 import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 
 const navLinks = [
   { href: '/#menu', label: 'Menu' },
@@ -15,8 +16,9 @@ const navLinks = [
 ];
 
 export default function Header() {
-  const { state: { items, isOpen }, dispatch } = useCart();
+  const { state: { items }, dispatch } = useCart();
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -27,6 +29,10 @@ export default function Header() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  if (pathname === '/scan') {
+    return null;
+  }
 
   return (
     <header
@@ -49,7 +55,13 @@ export default function Header() {
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Link href="/scan">
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <QrCode className="h-5 w-5" />
+                <span className="sr-only">Scan Table QR</span>
+              </Button>
+            </Link>
             <Button
               variant="ghost"
               size="icon"
@@ -65,9 +77,13 @@ export default function Header() {
               )}
             </Button>
             <Link href="/admin/login">
-              <Button variant="outline" size="sm" className="rounded-full">
+              <Button variant="outline" size="sm" className="rounded-full hidden sm:flex">
                 <User className="h-4 w-4 mr-2" />
                 Admin
+              </Button>
+              <Button variant="outline" size="icon" className="rounded-full sm:hidden">
+                 <User className="h-4 w-4" />
+                 <span className="sr-only">Admin</span>
               </Button>
             </Link>
           </div>
