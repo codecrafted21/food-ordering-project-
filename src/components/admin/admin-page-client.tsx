@@ -16,9 +16,12 @@ export default function AdminPageClient() {
   const { user, isUserLoading } = useUser();
   const [filter, setFilter] = useState<string[]>(['Preparing', 'Cooking']);
 
+  // Check if the authenticated user is the administrator
+  const isAdmin = user?.email === 'admin@tablebites.com';
+
   const ordersQuery = useMemoFirebase(() => {
-    // IMPORTANT: Only create the query if the user is authenticated
-    if (!firestore || !user) return null;
+    // CRITICAL: Only create the query if the user is a logged-in admin.
+    if (!firestore || !isAdmin) return null;
     
     const restaurantId = "tablebites-restaurant";
     return query(
@@ -26,7 +29,7 @@ export default function AdminPageClient() {
         where('status', 'in', ['Preparing', 'Cooking']),
         orderBy('orderDate', 'asc')
     );
-  }, [firestore, user]); // Dependency on `user` ensures it re-runs on login
+  }, [firestore, isAdmin]); // Dependency on `isAdmin` ensures it re-runs on login
 
   const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
 
@@ -35,24 +38,35 @@ export default function AdminPageClient() {
     updateOrderStatus(firestore, restaurantId, orderId, newStatus);
   };
   
-  if (isUserLoading || (user && isLoadingOrders)) {
+  if (isUserLoading) {
     return (
         <div className="flex justify-center items-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-4">Loading Live Orders...</p>
+            <p className="ml-4">Authenticating...</p>
         </div>
     )
   }
 
-  if (!user) {
+  // If not an admin (or not logged in), show the login prompt.
+  if (!isAdmin) {
     return (
        <div className="text-center py-16 border-2 border-dashed rounded-lg">
             <LogIn className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h2 className="text-xl font-semibold mt-4">Authentication Required</h2>
-            <p className="text-muted-foreground mt-2">Please log in to view the live order dashboard.</p>
+            <h2 className="text-xl font-semibold mt-4">Admin Access Required</h2>
+            <p className="text-muted-foreground mt-2">Please log in as an administrator to view the dashboard.</p>
             <Button asChild className="mt-4">
               <Link href="/admin/login">Go to Login</Link>
             </Button>
+        </div>
+    )
+  }
+
+  // If admin is logged in, but orders are still loading.
+  if (isLoadingOrders) {
+    return (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-4">Loading Live Orders...</p>
         </div>
     )
   }

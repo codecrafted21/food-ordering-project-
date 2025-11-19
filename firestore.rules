@@ -1,15 +1,11 @@
 /**
  * @file Firestore Security Rules
- * @description This ruleset enforces a public-read model for restaurants and their associated data.
- *  It allows anonymous users to create orders, and allows anyone to view the list of orders for the admin panel.
+ * @description This ruleset secures the TableBites application data.
  *
- * Data Structure:
- * - /restaurants/{restaurantId}: Restaurant details (public read, admin write).
- * - /restaurants/{restaurantId}/menuCategories/{menuCategoryId}: Menu categories (public read, admin write).
- * - /restaurants/{restaurantId}/menuCategories/{menuCategoryId}/menuItems/{menuItemId}: Menu items (public read, admin write).
- * - /restaurants/{restaurantId}/orders/{orderId}: Orders for a restaurant.
- * - /restaurants/{restaurantId}/orders/{orderId}/orderItems/{orderItemId}: Items within an order.
- * - /restaurants/{restaurantId}/tables/{tableId}: Table information with QR codes (public read, admin write).
+ * Key principles:
+ * - Anonymous users can create orders.
+ * - Only authenticated admins can read the list of all orders.
+ * - Public data (restaurant info, menus) is readable by anyone.
  *
  */
 rules_version = '2';
@@ -17,74 +13,64 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows anyone to read restaurant data, but restricts writes.
-     * @path /restaurants/{restaurantId}
+     * @description Allows anyone to read restaurant and menu data. Only admins can write.
      */
     match /restaurants/{restaurantId} {
       allow get, list: if true;
-      allow create, update, delete: if isSignedIn() && isAdmin();
+      allow write: if isAdmin(); // `write` covers create, update, delete
 
-        /**
-         * @description Allows anyone to read menu category data, but restricts writes to authenticated users.
-         * @path /restaurants/{restaurantId}/menuCategories/{menuCategoryId}
-         */
-        match /menuCategories/{menuCategoryId} {
+      match /menuCategories/{menuCategoryId} {
+        allow get, list: if true;
+        allow write: if isAdmin();
+
+        match /menuItems/{menuItemId} {
           allow get, list: if true;
-          allow create, update, delete: if isSignedIn() && isAdmin();
-
-          /**
-           * @description Allows anyone to read menu item data, but restricts writes to authenticated users.
-           * @path /restaurants/{restaurantId}/menuCategories/{menuCategoryId}/menuItems/{menuItemId}
-           */
-          match /menuItems/{menuItemId} {
-            allow get, list: if true;
-            allow create, update, delete: if isSignedIn() && isAdmin();
-          }
+          allow write: if isAdmin();
         }
+      }
 
-        /**
-         * @description Publicly readable orders, but write access is restricted.
-         * @path /restaurants/{restaurantId}/orders
-         */
-        match /orders/{orderId} {
-          allow get: if true;
-          allow list: if true; // Allows anyone to list orders for the admin panel
-          allow create: if isSignedIn(); // Allow any signed-in user (including anonymous) to create orders
-          allow update, delete: if isSignedIn() && isAdmin(); // Only admin can update or delete
-          
-          /**
-           * @description Allows read access to order items, but restricts writes.
-           * @path /restaurants/{restaurantId}/orders/{orderId}/orderItems/{orderItemId}
-           */
-          match /orderItems/{orderItemId} {
-            allow get, list: if true;
-            allow create: if isSignedIn();
-            allow update, delete: if isSignedIn() && isAdmin();
-          }
-        }
+      /**
+       * @description Rules for the 'orders' subcollection.
+       */
+      match /orders/{orderId} {
+        // ALLOW ADMINS TO LIST/READ: Admins can see all orders for the dashboard.
+        allow list, get: if isAdmin();
+        
+        // ALLOW USERS TO CREATE: Any signed-in user (including anonymous) can create an order.
+        allow create: if isSignedIn();
+        
+        // ALLOW ADMINS TO UPDATE/DELETE: Only admins can change an order's status or delete it.
+        allow update, delete: if isAdmin();
 
-        /**
-         * @description Allows anyone to read table data, but restricts writes to authenticated users.
-         * @path /restaurants/{restaurantId}/tables/{tableId}
-         */
-        match /tables/{tableId} {
-          allow get, list: if true;
-          allow create, update, delete: if isSignedIn() && isAdmin();
+        match /orderItems/{orderItemId} {
+          allow get, list: if isAdmin();
+          allow create: if isSignedIn();
+          allow write: if isAdmin();
         }
+      }
+
+      /**
+       * @description Table data is public to read, but only admins can modify.
+       */
+      match /tables/{tableId} {
+        allow get, list: if true;
+        allow write: if isAdmin();
+      }
     }
 
+    /**
+     * Helper Functions
+     */
 
     /**
-     * @description Checks if the user is signed in. This can be an anonymous user.
-     * @return {boolean} True if the user is signed in, false otherwise.
+     * @description Checks if a user is signed in (can be anonymous).
      */
     function isSignedIn() {
       return request.auth != null;
     }
     
     /**
-     * @description Checks if the user is an admin.
-     * @return {boolean} True if the user's email is the admin email, false otherwise.
+     * @description Checks if the user is a designated administrator.
      */
     function isAdmin() {
       return request.auth != null && request.auth.token.email == "admin@tablebites.com";
