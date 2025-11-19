@@ -31,7 +31,6 @@ service cloud.firestore {
 
       /**
        * @description Rules for the 'orders' subcollection.
-       *              - This block handles collection-level queries and document-level access.
        */
       match /orders/{orderId} {
         
@@ -40,7 +39,7 @@ service cloud.firestore {
         *              This rule is checked for queries on the 'orders' collection.
         */
         allow list: if isAdmin();
-
+        
         /**
         * @description Rules for actions on a single document.
         *              - Any signed-in user (including anonymous) can create an order.
