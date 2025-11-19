@@ -22,7 +22,7 @@ service cloud.firestore {
      */
     match /restaurants/{restaurantId} {
       allow get, list: if true;
-      allow create, update, delete: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isAdmin();
 
         /**
          * @description Allows anyone to read menu category data, but restricts writes to authenticated users.
@@ -30,7 +30,7 @@ service cloud.firestore {
          */
         match /menuCategories/{menuCategoryId} {
           allow get, list: if true;
-          allow create, update, delete: if isSignedIn();
+          allow create, update, delete: if isSignedIn() && isAdmin();
 
           /**
            * @description Allows anyone to read menu item data, but restricts writes to authenticated users.
@@ -38,7 +38,7 @@ service cloud.firestore {
            */
           match /menuItems/{menuItemId} {
             allow get, list: if true;
-            allow create, update, delete: if isSignedIn();
+            allow create, update, delete: if isSignedIn() && isAdmin();
           }
         }
 
@@ -50,7 +50,7 @@ service cloud.firestore {
           allow get: if true;
           allow list: if true; // Allows anyone to list orders for the admin panel
           allow create: if isSignedIn(); // Allow any signed-in user (including anonymous) to create orders
-          allow update, delete: if isAdmin(); // Only admin can update or delete
+          allow update, delete: if isSignedIn() && isAdmin(); // Only admin can update or delete
           
           /**
            * @description Allows read access to order items, but restricts writes.
@@ -59,7 +59,7 @@ service cloud.firestore {
           match /orderItems/{orderItemId} {
             allow get, list: if true;
             allow create: if isSignedIn();
-            allow update, delete: if isAdmin();
+            allow update, delete: if isSignedIn() && isAdmin();
           }
         }
 
@@ -69,7 +69,7 @@ service cloud.firestore {
          */
         match /tables/{tableId} {
           allow get, list: if true;
-          allow create, update, delete: if isSignedIn();
+          allow create, update, delete: if isSignedIn() && isAdmin();
         }
     }
 
