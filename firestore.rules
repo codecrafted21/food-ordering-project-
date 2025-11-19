@@ -30,11 +30,12 @@ service cloud.firestore {
       }
 
       /**
-       * @description Rules for the 'orders' subcollection.
+       * @description Rules for the 'orders' subcollection. Admins can read/list all orders.
+       *              Any signed-in user can create an order.
        */
       match /orders/{orderId} {
-        // ALLOW ADMINS TO LIST/READ: Admins can see all orders for the dashboard.
-        allow list, get: if isAdmin();
+        // ALLOW ADMINS TO READ/LIST: Admins can see all orders for the dashboard.
+        allow get, list: if isAdmin();
         
         // ALLOW USERS TO CREATE: Any signed-in user (including anonymous) can create an order.
         allow create: if isSignedIn();
@@ -43,8 +44,10 @@ service cloud.firestore {
         allow update, delete: if isAdmin();
 
         match /orderItems/{orderItemId} {
+          // Rules for order items follow the parent order's permissions.
           allow get, list: if isAdmin();
           allow create: if isSignedIn();
+          // Let admins modify or delete individual items if needed.
           allow write: if isAdmin();
         }
       }
