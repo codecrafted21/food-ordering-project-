@@ -48,6 +48,7 @@ service cloud.firestore {
          */
         match /orders/{orderId} {
           allow get: if true;
+          allow list: if true; // Allows anyone to list orders for the admin panel
           allow create: if isSignedIn(); // Allow any signed-in user (including anonymous) to create orders
           allow update, delete: if isAdmin(); // Only admin can update or delete
           
@@ -60,11 +61,6 @@ service cloud.firestore {
             allow create: if isSignedIn();
             allow update, delete: if isAdmin();
           }
-        }
-        
-        // This rule allows anyone to LIST the orders collection, which is needed for the admin dashboard.
-        match /orders {
-          allow list: if true;
         }
 
         /**
