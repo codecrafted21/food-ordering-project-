@@ -7,8 +7,6 @@ import { DISHES, CATEGORIES } from '@/lib/data';
 import { DishCard } from '@/components/menu/dish-card';
 import { CategoryCarousel } from '@/components/menu/category-carousel';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Button } from '@/components/ui/button';
-import { ScanLine } from 'lucide-react';
 
 function MenuContent() {
   const router = useRouter();
@@ -25,12 +23,6 @@ function MenuContent() {
       localStorage.setItem('tableNumber', table);
       // Use replace to avoid adding to browser history
       router.replace(`/?category=${currentCategory}#menu`);
-    } else {
-      // If there's no table in the URL, check if one is in storage.
-      // If not, redirect to the scan page.
-      if (!localStorage.getItem('tableNumber')) {
-        router.replace('/scan');
-      }
     }
   }, [table, router, currentCategory]);
 
@@ -60,14 +52,6 @@ function MenuContent() {
             <p className="mt-4 text-lg md:text-xl text-primary-foreground/90">
               Explore our curated menu and order directly from your table.
             </p>
-             <Button
-              variant="secondary"
-              className="mt-6"
-              onClick={() => router.push('/scan')}
-            >
-              <ScanLine className="mr-2 h-4 w-4" />
-              Change Table
-            </Button>
           </div>
         </div>
       </section>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Home } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 function CheckoutLogic() {
@@ -15,16 +15,16 @@ function CheckoutLogic() {
   const { state, dispatch } = useCart();
   const { toast } = useToast();
   const [tableNumber, setTableNumber] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // This component can't be rendered on the server, so we can safely access localStorage.
     const storedTable = localStorage.getItem('tableNumber');
     if (storedTable) {
       setTableNumber(storedTable);
-    } else {
-      // If no table number is found, the user needs to scan a QR code.
-      router.replace('/scan');
     }
-  }, [router]);
+    setIsLoading(false);
+  }, []);
 
 
   const { items } = state;
@@ -37,9 +37,9 @@ function CheckoutLogic() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Table number is missing. Please scan a QR code.',
+        description: 'Table number is missing. Please return to the menu.',
       });
-      router.push('/scan');
+      router.push('/');
       return;
     }
     // In a real app, this would trigger a server action to save the order
@@ -56,22 +56,31 @@ function CheckoutLogic() {
     router.push(`/order/${orderId}?table=${tableNumber}`);
   };
   
+    if (isLoading) {
+      return (
+        <div className="flex justify-center items-center h-64">
+            <p>Loading checkout details...</p>
+        </div>
+      )
+    }
+
     if (!tableNumber) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center h-64">
-         <Alert variant="destructive" className="max-w-md">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>No Table Selected</AlertTitle>
-            <AlertDescription>
-              We need a table number to proceed. Please go back and scan a QR code.
-            </AlertDescription>
-          </Alert>
-          <Button onClick={() => router.push('/scan')} className="mt-4">
-            Scan QR Code
-          </Button>
-      </div>
-    );
-  }
+      return (
+        <div className="flex flex-col items-center justify-center text-center h-64">
+           <Alert variant="destructive" className="max-w-md">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>No Table Selected</AlertTitle>
+              <AlertDescription>
+                We don't have a table number for your order. Please go back to the menu.
+              </AlertDescription>
+            </Alert>
+            <Button onClick={() => router.push('/')} className="mt-4">
+              <Home className="mr-2 h-4 w-4" />
+              Return to Menu
+            </Button>
+        </div>
+      );
+    }
 
 
   return (
