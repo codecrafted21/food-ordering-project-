@@ -34,7 +34,6 @@ service cloud.firestore {
        *              Only an admin can perform a list operation.
        */
       match /orders/{orderId} {
-        allow list: if isAdmin();
         
         /**
         * @description Rules for actions on a single order document.
@@ -43,6 +42,7 @@ service cloud.firestore {
         */
         allow get, update, delete: if isAdmin();
         allow create: if isSignedIn();
+        allow list: if isAdmin();
 
         match /orderItems/{orderItemId} {
           // Rules for order items follow the parent order's permissions.
