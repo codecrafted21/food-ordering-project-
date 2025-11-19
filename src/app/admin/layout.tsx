@@ -23,7 +23,6 @@ export default function AdminLayout({
         </div>
       </div>
       <div className="flex flex-col">
-        {/* The header is now part of the main content area, allowing pages to control their own titles */}
         <main className="flex flex-1 flex-col bg-background">
           {children}
         </main>

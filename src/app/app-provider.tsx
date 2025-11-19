@@ -10,12 +10,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith('/admin');
 
+  // The admin section now has its own layout, so we don't render the main app shell for it.
   if (isAdminRoute) {
-    return (
-       <div className="flex min-h-screen flex-col bg-card">
-          <main className="flex-1">{children}</main>
-        </div>
-    )
+    return <>{children}</>;
   }
 
   return (

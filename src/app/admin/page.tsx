@@ -16,7 +16,7 @@ export default function AdminDashboardPage() {
     }
   }, [isUserLoading, user, router]);
 
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -25,7 +25,8 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (user) {
+  // Only render if the user is the admin
+  if (user.email === 'admin@tablebites.com') {
     return (
        <>
         <header className="flex h-16 items-center border-b bg-card px-4 lg:px-6 sticky top-0 z-30">
@@ -38,5 +39,12 @@ export default function AdminDashboardPage() {
     );
   }
   
+  // If a non-admin user somehow gets here, show an error or redirect.
+  // For now, we can redirect them to the login page.
+  if (user && user.email !== 'admin@tablebites.com') {
+    router.push('/admin/login');
+    return null; // Don't render anything while redirecting
+  }
+
   return null;
 }
