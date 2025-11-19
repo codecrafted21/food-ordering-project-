@@ -1,5 +1,7 @@
+
 'use client';
 
+import { useEffect } from "react";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
@@ -16,14 +18,23 @@ export default function AdminLayout({
   const auth = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    // If loading is finished and there's no user, redirect to login.
+    if (!isUserLoading && !user) {
+      router.push('/admin/login');
+    }
+  }, [isUserLoading, user, router]);
+
   const handleLogout = () => {
     if (auth) {
       auth.signOut();
-      router.push('/admin/login');
+      // The useEffect above will handle the redirect after sign-out.
     }
   };
 
-  if (isUserLoading) {
+  // While loading or if there's no user yet, show a loading screen.
+  // The useEffect will handle the redirect.
+  if (isUserLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -32,22 +43,7 @@ export default function AdminLayout({
     );
   }
 
-  // If not loading and no user, redirect to login
-  if (!user) {
-    // In a real app, you might want a more robust way to handle this,
-    // but a client-side redirect is fine for this case.
-    if (typeof window !== 'undefined') {
-       router.push('/admin/login');
-    }
-    return (
-       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-4">Redirecting to login...</p>
-      </div>
-    );
-  }
-
-
+  // If we have a user, render the admin layout.
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-card md:block">
