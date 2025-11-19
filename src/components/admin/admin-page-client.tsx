@@ -14,20 +14,22 @@ import { collection, query, where, orderBy, Firestore } from 'firebase/firestore
 export default function AdminPageClient() {
   const firestore = useFirestore();
   const { user } = useUser();
-  const [filter, setFilter] = useState<string[]>(['Preparing', 'Cooking']);
+  const [filter, setFilter] = useState<OrderStatus[]>(['Preparing', 'Cooking']);
 
   const isAdmin = user?.email === 'admin@tablebites.com';
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !isAdmin) return null;
+    // Only run the query if we have a filter, a firestore instance, and are logged in as admin.
+    if (!firestore || !isAdmin || filter.length === 0) return null;
     
     const restaurantId = "tablebites-restaurant";
+    // This query now matches the security rules, as we are filtering by 'status'.
     return query(
         collection(firestore, `restaurants/${restaurantId}/orders`),
-        where('status', 'in', ['Preparing', 'Cooking']),
+        where('status', 'in', filter),
         orderBy('orderDate', 'asc')
     );
-  }, [firestore, isAdmin]);
+  }, [firestore, isAdmin, filter]);
 
   const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
 
@@ -48,17 +50,11 @@ export default function AdminPageClient() {
         </div>
     )
   }
-
-  if (isLoadingOrders) {
-    return (
-        <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-4">Loading Live Orders...</p>
-        </div>
-    )
-  }
-
-  const filteredOrders = orders?.filter(order => filter.includes(order.status));
+  
+  const handleFilterChange = (value: string[]) => {
+    // Ensure the value is correctly typed to OrderStatus[]
+    setFilter(value as OrderStatus[]);
+  };
 
   return (
     <div>
@@ -67,7 +63,7 @@ export default function AdminPageClient() {
                 type="multiple"
                 variant="outline"
                 value={filter}
-                onValueChange={(value) => setFilter(value.length > 0 ? value : [])}
+                onValueChange={handleFilterChange}
                 aria-label="Filter order status"
             >
                 <ToggleGroupItem value="Preparing" aria-label="Toggle Preparing">
@@ -78,19 +74,28 @@ export default function AdminPageClient() {
                 </ToggleGroupItem>
             </ToggleGroup>
         </div>
+      
+      {isLoadingOrders && (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-4">Loading Live Orders...</p>
+        </div>
+      )}
 
-      {filteredOrders && filteredOrders.length > 0 ? (
+      {!isLoadingOrders && orders && orders.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOrders.map(order => (
+          {orders.map(order => (
             <OrderCard key={order.id} order={order} onStatusUpdate={(orderId, newStatus) => handleStatusUpdate(firestore!, orderId, newStatus)} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 border-2 border-dashed rounded-lg">
-            <Utensils className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h2 className="text-xl font-semibold mt-4">All Caught Up!</h2>
-            <p className="text-muted-foreground mt-2">No active orders matching your filter right now.</p>
-        </div>
+        !isLoadingOrders && (
+          <div className="text-center py-16 border-2 border-dashed rounded-lg">
+              <Utensils className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h2 className="text-xl font-semibold mt-4">All Caught Up!</h2>
+              <p className="text-muted-foreground mt-2">No active orders matching your filter right now.</p>
+          </div>
+        )
       )}
     </div>
   );

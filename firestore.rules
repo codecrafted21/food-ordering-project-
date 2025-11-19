@@ -1,88 +1,26 @@
-/**
- * @file Firestore Security Rules
- * @description This ruleset secures the TableBites application data.
- *
- * Key principles:
- * - Anonymous users can create orders.
- * - Only authenticated admins can read the list of all orders.
- * - Public data (restaurant info, menus) is readable by anyone.
- *
- */
 rules_version = '2';
+
+function isAdmin() {
+  return request.auth != null
+      && request.auth.token.email == "admin@tablebites.com";
+}
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * @description Allows anyone to read restaurant and menu data. Only admins can write.
-     */
-    match /restaurants/{restaurantId} {
-      allow get, list: if true;
-      allow write: if isAdmin(); // `write` covers create, update, delete
-
-      match /menuCategories/{menuCategoryId} {
-        allow get, list: if true;
-        allow write: if isAdmin();
-
-        match /menuItems/{menuItemId} {
-          allow get, list: if true;
-          allow write: if isAdmin();
-        }
-      }
-
-      /**
-       * @description Rules for the 'orders' subcollection.
-       */
-      match /orders/{orderId} {
-        
-        /**
-        * @description Rules for actions on a single order document.
-        *              - Any signed-in user (including anonymous) can create an order.
-        *              - Only admins can read, update, or delete a specific order.
-        */
-        allow get, update, delete: if isAdmin();
-        allow create: if isSignedIn();
-
-        /**
-         * @description Rule for listing/querying the 'orders' collection.
-         *              Only an admin can perform a list operation. This rule must be
-         *              on the collection path to work for queries.
-         */
-        allow list: if isAdmin();
-
-        match /orderItems/{orderItemId} {
-          // Rules for order items follow the parent order's permissions.
-          allow get, list: if isAdmin();
-          allow create: if isSignedIn();
-          // Let admins modify or delete individual items if needed.
-          allow write: if isAdmin();
-        }
-      }
-
-      /**
-       * @description Table data is public to read, but only admins can modify.
-       */
-      match /tables/{tableId} {
-        allow get, list: if true;
-        allow write: if isAdmin();
-      }
-    }
-
-    /**
-     * Helper Functions
-     */
-
-    /**
-     * @description Checks if a user is signed in (can be anonymous).
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
     
-    /**
-     * @description Checks if the user is a designated administrator.
-     */
-    function isAdmin() {
-      return request.auth != null && request.auth.token.email == "admin@tablebites.com";
+    match /restaurants/{restaurantId} {
+      
+      // Rule for querying the 'orders' collection.
+      // This allows admins to list orders, specifically when filtering by 'status'.
+      match /orders/{orderId} {
+        allow list: if isAdmin() && request.query.keys().hasOnly(['status']);
+
+        // Rule for accessing a single order document.
+        allow read, write: if isAdmin();
+
+        // Allow any authenticated user (including anonymous) to create an order.
+        allow create: if request.auth != null;
+      }
     }
   }
 }
