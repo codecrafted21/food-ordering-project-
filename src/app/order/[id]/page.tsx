@@ -57,7 +57,6 @@ function OrderTrackingPageContent({ orderId, tableNumber }: { orderId: string, t
   );
 }
 
-
 function OrderPage({ params }: { params: { id: string } }) {
   const searchParams = useSearchParams();
   const tableNumber = searchParams.get('table');
@@ -70,5 +69,5 @@ export default function OrderPageWrapper({ params }: { params: { id: string } })
     <Suspense fallback={<div>Loading order details...</div>}>
       <OrderPage params={params} />
     </Suspense>
-  )
+  );
 }
