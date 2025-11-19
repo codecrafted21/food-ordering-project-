@@ -7,7 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScanLine, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 export default function ScanPage() {
   const router = useRouter();
@@ -95,7 +94,9 @@ export default function ScanPage() {
     }
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
     };
   }, [hasCameraPermission, router, toast]);
 
