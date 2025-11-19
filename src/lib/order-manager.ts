@@ -1,53 +1,73 @@
-// A simple in-memory and localStorage-based order manager for demonstration.
-// In a real app, you would use a database like Firestore.
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  doc,
+  serverTimestamp,
+  writeBatch,
+  Firestore,
+} from 'firebase/firestore';
+import type { CartItem, OrderStatus } from '@/lib/types';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-import type { Order, OrderStatus } from '@/lib/types';
-import { MOCK_ORDERS } from './data';
+interface OrderData {
+  restaurantId: string;
+  tableNumber: string;
+  items: CartItem[];
+  total: number;
+  status: OrderStatus;
+}
 
-const ORDER_STORAGE_KEY = 'tablebites_orders';
+// Function to add a new order to Firestore
+export const addOrder = async (firestore: Firestore, orderData: OrderData): Promise<string | null> => {
+  const { restaurantId, tableNumber, items, total, status } = orderData;
+  
+  try {
+    const ordersCollection = collection(firestore, `restaurants/${restaurantId}/orders`);
+    
+    // 1. Create the main order document
+    const orderDocRef = await addDoc(ordersCollection, {
+      tableNumber: tableNumber,
+      orderDate: serverTimestamp(),
+      status: status,
+      restaurantId: restaurantId,
+      // We don't store total on the order doc itself as it can be calculated from items.
+    });
 
-// Function to get orders from localStorage
-export const getOrders = (): Order[] => {
-  if (typeof window === 'undefined') {
-    return [];
+    // 2. Create a batch write for all the order items
+    const batch = writeBatch(firestore);
+    const orderItemsCollection = collection(firestore, `restaurants/${restaurantId}/orders/${orderDocRef.id}/orderItems`);
+
+    items.forEach(item => {
+      const orderItemRef = doc(orderItemsCollection); // Creates a new doc with a random ID
+      batch.set(orderItemRef, {
+        orderId: orderDocRef.id,
+        menuItemId: item.dish.id,
+        menuItemName: item.dish.name, // Denormalizing for easier display
+        quantity: item.quantity,
+        price: item.dish.price,
+      });
+    });
+
+    // 3. Commit the batch
+    await batch.commit();
+
+    return orderDocRef.id;
+
+  } catch (error) {
+    console.error("Error placing order:", error);
+    // In a real app, you would want to use a more robust error handling and user feedback mechanism
+    return null;
   }
-  const storedOrders = localStorage.getItem(ORDER_STORAGE_KEY);
-  if (storedOrders) {
-    try {
-      const parsedOrders = JSON.parse(storedOrders);
-      // Dates are stored as strings, so we need to convert them back
-      return parsedOrders.map((o: any) => ({ ...o, createdAt: new Date(o.createdAt) }));
-    } catch (e) {
-      console.error("Failed to parse orders from localStorage", e);
-      return [];
-    }
-  }
-  // Initialize with mock orders if nothing is in storage
-  setOrders(MOCK_ORDERS);
-  return MOCK_ORDERS;
 };
 
-// Function to save orders to localStorage
-export const setOrders = (orders: Order[]) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(orders));
-  // Dispatch a custom event to notify other tabs/windows
-  window.dispatchEvent(new Event('orders-updated'));
-};
-
-// Function to add a new order
-export const addOrder = (order: Order) => {
-  const currentOrders = getOrders();
-  const updatedOrders = [...currentOrders, order];
-  setOrders(updatedOrders);
-};
 
 // Function to update an order's status
-export const updateOrderStatus = (orderId: string, status: OrderStatus): Order[] => {
-    const currentOrders = getOrders();
-    const updatedOrders = currentOrders.map(o => 
-        o.id === orderId ? { ...o, status } : o
-    );
-    setOrders(updatedOrders);
-    return updatedOrders;
+export const updateOrderStatus = (firestore: Firestore, restaurantId: string, orderId: string, status: OrderStatus) => {
+    if (!restaurantId || !orderId) {
+        console.error("Missing restaurantId or orderId");
+        return;
+    }
+    const orderRef = doc(firestore, `restaurants/${restaurantId}/orders`, orderId);
+    updateDocumentNonBlocking(orderRef, { status: status });
 }

@@ -1,43 +1,49 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { OrderCard } from './order-card';
-import { getOrders, updateOrderStatus } from '@/lib/order-manager';
+import { updateOrderStatus } from '@/lib/order-manager';
 import type { Order, OrderStatus } from '@/lib/types';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ChefHat, CookingPot } from 'lucide-react';
+import { ChefHat, CookingPot, Loader2 } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, Firestore } from 'firebase/firestore';
 
 const ALL_STATUSES: OrderStatus[] = ['Preparing', 'Cooking', 'Served'];
 
 export default function AdminPageClient() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const firestore = useFirestore();
   const [filter, setFilter] = useState<string[]>(['Preparing', 'Cooking']);
 
-  useEffect(() => {
-    // Load initial orders
-    const loadOrders = () => {
-      const liveOrders = getOrders().filter(o => o.status !== 'Served');
-      setOrders(liveOrders);
-    };
-    
-    loadOrders();
+  // This query will fetch all orders that are not 'Served' and order them by creation time.
+  // The useCollection hook will update this in real-time.
+  const ordersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const restaurantId = "tablebites-restaurant";
+    return query(
+        collection(firestore, `restaurants/${restaurantId}/orders`),
+        where('status', 'in', ['Preparing', 'Cooking']),
+        orderBy('orderDate', 'asc')
+    );
+  }, [firestore]);
 
-    // Listen for custom event to reload orders
-    window.addEventListener('orders-updated', loadOrders);
+  const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
 
-    // Cleanup listener on component unmount
-    return () => {
-      window.removeEventListener('orders-updated', loadOrders);
-    };
-  }, []);
-
-
-  const handleStatusUpdate = (orderId: string, newStatus: OrderStatus) => {
-    const updatedOrders = updateOrderStatus(orderId, newStatus);
-    setOrders(updatedOrders.filter(o => o.status !== 'Served'));
+  const handleStatusUpdate = (firestore: Firestore, orderId: string, newStatus: OrderStatus) => {
+    const restaurantId = "tablebites-restaurant";
+    updateOrderStatus(firestore, restaurantId, orderId, newStatus);
   };
 
-  const filteredOrders = orders.filter(order => filter.includes(order.status));
+  if (isLoading) {
+    return (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="ml-4">Loading Live Orders...</p>
+        </div>
+    )
+  }
+
+  const filteredOrders = orders?.filter(order => filter.includes(order.status));
 
   return (
     <div>
@@ -58,10 +64,10 @@ export default function AdminPageClient() {
             </ToggleGroup>
         </div>
 
-      {filteredOrders.length > 0 ? (
+      {filteredOrders && filteredOrders.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOrders.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).map(order => (
-            <OrderCard key={order.id} order={order} onStatusUpdate={handleStatusUpdate} />
+          {filteredOrders.map(order => (
+            <OrderCard key={order.id} order={order} onStatusUpdate={(orderId, newStatus) => handleStatusUpdate(firestore, orderId, newStatus)} />
           ))}
         </div>
       ) : (

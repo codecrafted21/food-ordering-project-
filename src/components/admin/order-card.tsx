@@ -1,12 +1,15 @@
 'use client';
 
-import type { Order, OrderStatus } from '@/lib/types';
+import { useState, useEffect } from 'react';
+import type { Order, OrderItem, OrderStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ArrowRight } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 type OrderCardProps = {
   order: Order;
@@ -23,6 +26,24 @@ const statusColors: Record<OrderStatus, string> = {
 }
 
 export function OrderCard({ order, onStatusUpdate }: OrderCardProps) {
+  const firestore = useFirestore();
+  const [total, setTotal] = useState(0);
+
+  const orderItemsQuery = useMemoFirebase(() => {
+    if (!firestore || !order.restaurantId || !order.id) return null;
+    return collection(firestore, `restaurants/${order.restaurantId}/orders/${order.id}/orderItems`);
+  }, [firestore, order.restaurantId, order.id]);
+
+  const { data: orderItems } = useCollection<OrderItem>(orderItemsQuery);
+
+  useEffect(() => {
+    if (orderItems) {
+      const calculatedTotal = orderItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+      setTotal(calculatedTotal);
+    }
+  }, [orderItems]);
+
+
   const currentIndex = statusFlow.indexOf(order.status);
   const nextStatus = currentIndex < statusFlow.length - 1 ? statusFlow[currentIndex + 1] : null;
 
@@ -32,24 +53,25 @@ export function OrderCard({ order, onStatusUpdate }: OrderCardProps) {
         <div className="flex justify-between items-start">
             <div>
                 <CardTitle className="font-headline text-xl">Table {order.tableNumber}</CardTitle>
-                <CardDescription>{order.id} &bull; {formatDistanceToNow(order.createdAt, { addSuffix: true })}</CardDescription>
+                <CardDescription>{order.id} &bull; {formatDistanceToNow(new Date(order.orderDate), { addSuffix: true })}</CardDescription>
             </div>
             <Badge variant="outline" className={statusColors[order.status]}>{order.status}</Badge>
         </div>
       </CardHeader>
       <CardContent className="flex-1">
         <ul className="space-y-2 text-sm">
-          {order.items.map(item => (
+          {orderItems?.map(item => (
             <li key={item.id} className="flex justify-between">
-              <span>{item.quantity} x {item.dish.name}</span>
-              <span>₹{(item.dish.price * item.quantity).toFixed(2)}</span>
+              {/* In a real app, you'd fetch the item name from the menuItemId */}
+              <span>{item.quantity} x {item.menuItemName || `Item ${item.menuItemId}`}</span>
+              <span>₹{(item.price * item.quantity).toFixed(2)}</span>
             </li>
           ))}
         </ul>
         <Separator className="my-4" />
         <div className="flex justify-between font-bold">
           <span>Total</span>
-          <span>₹{order.total.toFixed(2)}</span>
+          <span>₹{total.toFixed(2)}</span>
         </div>
       </CardContent>
       <CardFooter>

@@ -27,14 +27,25 @@ export type CartItem = {
 
 export type OrderStatus = 'Preparing' | 'Cooking' | 'Served' | 'Canceled';
 
+// This represents an Order document in Firestore
 export type Order = {
-  id: string;
-  tableNumber: number;
-  items: CartItem[];
-  total: number;
+  id: string; // Document ID
+  restaurantId: string;
+  tableNumber: string;
+  orderDate: string; // ISO String date
   status: OrderStatus;
-  createdAt: Date;
 };
+
+// This represents an OrderItem document in the subcollection
+export type OrderItem = {
+    id: string; // Document ID
+    orderId: string;
+    menuItemId: string;
+    menuItemName?: string; // Denormalized for convenience
+    quantity: number;
+    price: number; // Price at time of order
+}
+
 
 export type Waiter = {
   id: string;

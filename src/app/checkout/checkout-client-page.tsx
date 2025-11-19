@@ -10,17 +10,17 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Home } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { addOrder } from '@/lib/order-manager';
-import type { Order } from '@/lib/types';
+import { useFirestore } from '@/firebase';
 
 function CheckoutLogic() {
   const router = useRouter();
+  const firestore = useFirestore();
   const { state, dispatch } = useCart();
   const { toast } = useToast();
   const [tableNumber, setTableNumber] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This component can't be rendered on the server, so we can safely access localStorage.
     const storedTable = localStorage.getItem('tableNumber');
     if (storedTable) {
       setTableNumber(storedTable);
@@ -28,13 +28,12 @@ function CheckoutLogic() {
     setIsLoading(false);
   }, []);
 
-
   const { items } = state;
   const subtotal = items.reduce((sum, item) => sum + item.dish.price * item.quantity, 0);
   const taxes = subtotal * 0.1;
   const total = subtotal + taxes;
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!tableNumber) {
       toast({
         variant: 'destructive',
@@ -45,54 +44,60 @@ function CheckoutLogic() {
       return;
     }
     
-    const orderId = `TB-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-    const newOrder: Order = {
-      id: orderId,
-      tableNumber: parseInt(tableNumber, 10),
-      items: items,
-      total: total,
+    // In a real app, restaurantId would be dynamic
+    const restaurantId = "tablebites-restaurant";
+
+    const orderId = await addOrder(firestore, {
+      restaurantId,
+      tableNumber,
+      items,
+      total,
       status: 'Preparing',
-      createdAt: new Date(),
-    };
-
-    addOrder(newOrder);
-
-    dispatch({ type: 'CLEAR_CART' });
-
-    toast({
-      title: 'Order Placed!',
-      description: 'Your order has been sent to the kitchen.',
     });
 
-    router.push(`/order/${orderId}?table=${tableNumber}`);
+    if (orderId) {
+      dispatch({ type: 'CLEAR_CART' });
+
+      toast({
+        title: 'Order Placed!',
+        description: 'Your order has been sent to the kitchen.',
+      });
+
+      router.push(`/order/${orderId}?table=${tableNumber}`);
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Order Failed',
+            description: 'Could not place your order. Please try again.',
+        });
+    }
   };
   
-    if (isLoading) {
-      return (
-        <div className="flex justify-center items-center h-64">
-            <p>Loading checkout details...</p>
-        </div>
-      )
-    }
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+          <p>Loading checkout details...</p>
+      </div>
+    )
+  }
 
-    if (!tableNumber) {
-      return (
-        <div className="flex flex-col items-center justify-center text-center h-64">
-           <Alert variant="destructive" className="max-w-md">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>No Table Selected</AlertTitle>
-              <AlertDescription>
-                We don't have a table number for your order. Please go back and scan a QR code.
-              </AlertDescription>
-            </Alert>
-            <Button onClick={() => router.push('/')} className="mt-4">
-              <Home className="mr-2 h-4 w-4" />
-              Return to Menu
-            </Button>
-        </div>
-      );
-    }
-
+  if (!tableNumber) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center h-64">
+         <Alert variant="destructive" className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No Table Selected</AlertTitle>
+            <AlertDescription>
+              We don't have a table number for your order. Please go back and scan a QR code.
+            </AlertDescription>
+          </Alert>
+          <Button onClick={() => router.push('/')} className="mt-4">
+            <Home className="mr-2 h-4 w-4" />
+            Return to Menu
+          </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">

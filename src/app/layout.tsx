@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppProvider } from '@/app/app-provider';
 import { cn } from '@/lib/utils';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -36,9 +37,11 @@ export default function RootLayout({
           playfairDisplay.variable
         )}
       >
-        <AppProvider>
-          {children}
-        </AppProvider>
+        <FirebaseClientProvider>
+          <AppProvider>
+            {children}
+          </AppProvider>
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>
