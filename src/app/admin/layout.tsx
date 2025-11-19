@@ -2,8 +2,6 @@
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { Logo } from "@/components/shared/logo";
-import Link from "next/link";
-
 
 export default function AdminLayout({
   children,
@@ -16,9 +14,7 @@ export default function AdminLayout({
       <div className="hidden border-r bg-card md:block">
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-16 items-center border-b px-4 lg:px-6">
-           <Link href="/">
-              <Logo />
-            </Link>
+            <Logo />
           </div>
           <div className="flex-1">
             <AdminSidebar />
