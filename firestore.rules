@@ -74,10 +74,11 @@ service cloud.firestore {
      * @principle Uses path-based ownership and requires denormalization of `restaurantId`.
      */
     match /restaurants/{restaurantId}/orders/{orderId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
       allow create: if isSignedIn() && request.resource.data.restaurantId == restaurantId;
-      allow update: if isSignedIn() && isExistingOwner(restaurantId);
-      allow delete: if isSignedIn() && isExistingOwner(restaurantId);
+      allow update: if isSignedIn() && isExistingOwner(restaurantId) || isAdmin();
+      allow delete: if isSignedIn() && isExistingOwner(restaurantId) || isAdmin();
 
       function isExistingOwner(restaurantId) {
         return resource != null && resource.data.restaurantId == restaurantId;
@@ -97,8 +98,8 @@ service cloud.firestore {
     match /restaurants/{restaurantId}/orders/{orderId}/orderItems/{orderItemId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.orderId == orderId;
-      allow update: if isSignedIn() && isExistingOrder(orderId);
-      allow delete: if isSignedIn() && isExistingOrder(orderId);
+      allow update: if isSignedIn() && isExistingOrder(orderId) || isAdmin();
+      allow delete: if isSignedIn() && isExistingOrder(orderId) || isAdmin();
 
       function isExistingOrder(orderId) {
         return resource != null && resource.data.orderId == orderId;
@@ -123,6 +124,13 @@ service cloud.firestore {
      */
     function isSignedIn() {
       return request.auth != null;
+    }
+     /**
+     * @description Checks if the user is an admin.
+     * @return {boolean} True if the user's email is the admin email, false otherwise.
+     */
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == "admin@tablebites.com";
     }
   }
 }
