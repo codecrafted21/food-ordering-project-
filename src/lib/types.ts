@@ -34,6 +34,7 @@ export type Order = {
   tableNumber: string;
   orderDate: string; // ISO String date
   status: OrderStatus;
+  userId: string; // The UID of the user who placed the order
 };
 
 // This represents an OrderItem document in the subcollection

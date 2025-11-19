@@ -7,11 +7,14 @@ import { DISHES, CATEGORIES } from '@/lib/data';
 import { DishCard } from '@/components/menu/dish-card';
 import { CategoryCarousel } from '@/components/menu/category-carousel';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useAuth } from '@/firebase';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 function MenuContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-1');
+  const auth = useAuth();
 
   const currentCategory = searchParams.get('category') || CATEGORIES[0].id;
   const table = searchParams.get('table');
@@ -24,11 +27,23 @@ function MenuContent() {
       // Use replace to avoid adding to browser history
       router.replace(`/?category=${currentCategory}#menu`);
     } else if (!localStorage.getItem('tableNumber')) {
-      // If there's no table in the URL and no table in storage,
-      // redirect to the scan page.
-      router.push('/scan');
+      // In a real deployed app you might want a different flow,
+      // but for now we'll just log that no table is set.
+      console.log("No table number found in URL or local storage.");
     }
   }, [table, router, currentCategory]);
+
+  useEffect(() => {
+    // Automatically sign in the user anonymously if they are not already.
+    if (auth) {
+      const unsubscribe = auth.onAuthStateChanged(user => {
+        if (!user) {
+          initiateAnonymousSignIn(auth);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [auth]);
 
 
   const filteredDishes = DISHES.filter(

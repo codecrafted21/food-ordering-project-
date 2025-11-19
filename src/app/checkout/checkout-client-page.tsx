@@ -7,17 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, Home } from 'lucide-react';
+import { AlertCircle, Home, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { addOrder } from '@/lib/order-manager';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 
 function CheckoutLogic() {
   const router = useRouter();
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
   const { state, dispatch } = useCart();
   const { toast } = useToast();
   const [tableNumber, setTableNumber] = useState<string | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -25,8 +27,9 @@ function CheckoutLogic() {
     if (storedTable) {
       setTableNumber(storedTable);
     }
-    setIsLoading(false);
-  }, []);
+    // Combined loading state
+    setIsLoading(isUserLoading);
+  }, [isUserLoading]);
 
   const { items } = state;
   const subtotal = items.reduce((sum, item) => sum + item.dish.price * item.quantity, 0);
@@ -43,7 +46,16 @@ function CheckoutLogic() {
       router.push('/');
       return;
     }
-    
+     if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "You're not signed in. Please refresh and try again.",
+      });
+      return;
+    }
+
+    setIsPlacingOrder(true);
     // In a real app, restaurantId would be dynamic
     const restaurantId = "tablebites-restaurant";
 
@@ -53,6 +65,7 @@ function CheckoutLogic() {
       items,
       total,
       status: 'Preparing',
+      userId: user.uid,
     });
 
     if (orderId) {
@@ -68,15 +81,17 @@ function CheckoutLogic() {
         toast({
             variant: 'destructive',
             title: 'Order Failed',
-            description: 'Could not place your order. Please try again.',
+            description: 'Could not place your order. Please check permissions and try again.',
         });
     }
+    setIsPlacingOrder(false);
   };
   
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-          <p>Loading checkout details...</p>
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="ml-4">Loading checkout details...</p>
       </div>
     )
   }
@@ -151,7 +166,8 @@ function CheckoutLogic() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full font-bold" size="lg" onClick={handlePlaceOrder} disabled={items.length === 0}>
+            <Button className="w-full font-bold" size="lg" onClick={handlePlaceOrder} disabled={items.length === 0 || isPlacingOrder}>
+              {isPlacingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Place Order
             </Button>
           </CardFooter>

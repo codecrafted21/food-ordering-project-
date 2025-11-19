@@ -8,7 +8,7 @@ import {
   Firestore,
 } from 'firebase/firestore';
 import type { CartItem, OrderStatus } from '@/lib/types';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface OrderData {
   restaurantId: string;
@@ -16,11 +16,12 @@ interface OrderData {
   items: CartItem[];
   total: number;
   status: OrderStatus;
+  userId: string;
 }
 
 // Function to add a new order to Firestore
 export const addOrder = async (firestore: Firestore, orderData: OrderData): Promise<string | null> => {
-  const { restaurantId, tableNumber, items, total, status } = orderData;
+  const { restaurantId, tableNumber, items, userId, status } = orderData;
   
   try {
     const ordersCollection = collection(firestore, `restaurants/${restaurantId}/orders`);
@@ -31,7 +32,7 @@ export const addOrder = async (firestore: Firestore, orderData: OrderData): Prom
       orderDate: serverTimestamp(),
       status: status,
       restaurantId: restaurantId,
-      // We don't store total on the order doc itself as it can be calculated from items.
+      userId: userId, // Add the user ID to the order
     });
 
     // 2. Create a batch write for all the order items

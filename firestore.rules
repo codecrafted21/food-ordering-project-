@@ -66,44 +66,30 @@ service cloud.firestore {
     /**
      * @description Allows authenticated users to read order data, and restricts writes.
      * @path /restaurants/{restaurantId}/orders/{orderId}
-     * @allow (get, list): Any authenticated user can read order data (customers and admins).
-     * @allow (create): Only an authenticated user can create order data. Checks if restaurantId in path matches restaurantId in resource data.
-     * @allow (update, delete): Only the authenticated user who created the order can update/delete it.
-     * @deny (create): If the restaurantId in the path does not match the restaurantId in the data.
-     * @deny (update, delete): If the order does not exist, or if the user is not the owner.
-     * @principle Uses path-based ownership and requires denormalization of `restaurantId`.
+     * @allow (get): Authenticated users can read their own orders.
+     * @allow (list): Only admins can list all orders.
+     * @allow (create): Any authenticated user (including anonymous) can create an order.
+     * @allow (update, delete): Only the user who created the order or an admin can update/delete it.
      */
     match /restaurants/{restaurantId}/orders/{orderId} {
-      allow get: if isSignedIn();
+      allow get: if isSignedIn() && (isOwner() || isAdmin());
       allow list: if isAdmin();
-      allow create: if isSignedIn() && request.resource.data.restaurantId == restaurantId;
-      allow update: if isSignedIn() && isExistingOwner(restaurantId) || isAdmin();
-      allow delete: if isSignedIn() && isExistingOwner(restaurantId) || isAdmin();
-
-      function isExistingOwner(restaurantId) {
-        return resource != null && resource.data.restaurantId == restaurantId;
-      }
+      allow create: if isSignedIn() && request.resource.data.restaurantId == restaurantId && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (isOwner() || isAdmin());
+      allow delete: if isSignedIn() && (isOwner() || isAdmin());
     }
 
     /**
      * @description Allows authenticated users to read order item data, and restricts writes.
      * @path /restaurants/{restaurantId}/orders/{orderId}/orderItems/{orderItemId}
-     * @allow (get, list): Any authenticated user can read order item data.
-     * @allow (create): Only an authenticated user can create order item data, provided that the `orderId` matches the path.
-     * @allow (update, delete): Only the authenticated user who created the order item can update/delete it, and only if the order item exists.
-     * @deny (create): If the orderId in the path does not match the orderId in the data.
-     * @deny (update, delete): If the order item does not exist, or if the user is not the owner.
-     * @principle Uses path-based ownership, requires denormalization of `orderId`, and enforces existence checks.
+     * @allow (get, list): Authenticated user who owns the parent order or an admin can read order items.
+     * @allow (create): Any authenticated user can create order items for an order they are creating.
+     * @allow (update, delete): Only the owner of the parent order or an admin can update/delete order items.
      */
     match /restaurants/{restaurantId}/orders/{orderId}/orderItems/{orderItemId} {
-      allow get, list: if isSignedIn();
+      allow get, list: if isSignedIn() && (isParentOrderOwner(restaurantId, orderId) || isAdmin());
       allow create: if isSignedIn() && request.resource.data.orderId == orderId;
-      allow update: if isSignedIn() && isExistingOrder(orderId) || isAdmin();
-      allow delete: if isSignedIn() && isExistingOrder(orderId) || isAdmin();
-
-      function isExistingOrder(orderId) {
-        return resource != null && resource.data.orderId == orderId;
-      }
+      allow update, delete: if isSignedIn() && (isParentOrderOwner(restaurantId, orderId) || isAdmin());
     }
 
     /**
@@ -125,12 +111,32 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-     /**
+    
+    /**
+     * @description Checks if the current user is the owner of the resource.
+     * Assumes a 'userId' field on the resource.
+     * @return {boolean} True if the user is the owner.
+     */
+    function isOwner() {
+      return resource.data.userId == request.auth.uid;
+    }
+
+    /**
      * @description Checks if the user is an admin.
      * @return {boolean} True if the user's email is the admin email, false otherwise.
      */
     function isAdmin() {
       return request.auth != null && request.auth.token.email == "admin@tablebites.com";
+    }
+
+    /**
+     * @description Checks if the current user owns the parent order document.
+     * @param restaurantId The ID of the restaurant.
+     * @param orderId The ID of the order.
+     * @return {boolean} True if the user owns the parent order.
+     */
+    function isParentOrderOwner(restaurantId, orderId) {
+      return get(/databases/$(database)/documents/restaurants/$(restaurantId)/orders/$(orderId)).data.userId == request.auth.uid;
     }
   }
 }
