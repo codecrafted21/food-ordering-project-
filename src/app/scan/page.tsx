@@ -64,21 +64,24 @@ export default function ScanPage() {
 
             if (code) {
               try {
+                // The expected URL format is `https://yourdomain.com/?table=...`
                 const url = new URL(code.data);
                 const table = url.searchParams.get('table');
+
+                // Check if the QR code is for the current site and has a table param.
                 if (table && url.origin === window.location.origin) {
                   localStorage.setItem('tableNumber', table);
                   toast({
                     title: 'Table Set!',
                     description: `You are now ordering for Table ${table}.`,
                   });
-                  router.push('/');
+                  router.push('/'); // Redirect to home, which will show the menu
                   return; // Stop scanning
                 } else {
                   setScanError("Invalid QR code. Please scan a valid TableBites QR code.");
                 }
               } catch (e) {
-                 setScanError("Invalid QR code format. Please scan a valid TableBites QR code.");
+                 setScanError("Invalid QR code format. The code should contain a valid website link.");
               }
             }
           }

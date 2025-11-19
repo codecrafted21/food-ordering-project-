@@ -21,6 +21,7 @@ function CheckoutLogic() {
     if (storedTable) {
       setTableNumber(storedTable);
     } else {
+      // If no table number is found, the user needs to scan a QR code.
       router.replace('/scan');
     }
   }, [router]);
