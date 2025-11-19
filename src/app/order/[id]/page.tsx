@@ -9,9 +9,7 @@ import { DISHES } from '@/lib/data';
 
 const statusFlow: OrderStatusType[] = ['Preparing', 'Cooking', 'Served'];
 
-function OrderTrackingPageContent({ params }: { params: { id: string } }) {
-  const searchParams = useSearchParams();
-  const tableNumber = searchParams.get('table');
+function OrderTrackingPageContent({ orderId, tableNumber }: { orderId: string, tableNumber: string | null }) {
   const [currentStatus, setCurrentStatus] = useState<OrderStatusType>(statusFlow[0]);
 
   useEffect(() => {
@@ -31,7 +29,7 @@ function OrderTrackingPageContent({ params }: { params: { id: string } }) {
           <CardHeader className="text-center">
             <CardTitle className="font-headline text-3xl">Thank You For Your Order!</CardTitle>
             <CardDescription>
-              Order ID: {params.id} | Table: {tableNumber || 'N/A'}
+              Order ID: {orderId} | Table: {tableNumber || 'N/A'}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center">
@@ -60,10 +58,17 @@ function OrderTrackingPageContent({ params }: { params: { id: string } }) {
 }
 
 
-export default function OrderPage({ params }: { params: { id: string } }) {
+function OrderPage({ params }: { params: { id: string } }) {
+  const searchParams = useSearchParams();
+  const tableNumber = searchParams.get('table');
+
+  return <OrderTrackingPageContent orderId={params.id} tableNumber={tableNumber} />;
+}
+
+export default function OrderPageWrapper({ params }: { params: { id: string } }) {
   return (
     <Suspense fallback={<div>Loading order details...</div>}>
-      <OrderTrackingPageContent params={params} />
+      <OrderPage params={params} />
     </Suspense>
   )
 }
