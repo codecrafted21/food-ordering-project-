@@ -1,0 +1,90 @@
+/**
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a secure model for the TableBites application.
+ *  - Restaurant, menu, and table data is public for reading.
+ *  - Anonymous users can be created to represent guest customers.
+ *  - Authenticated users (including anonymous ones) can create orders.
+ *  - Only authenticated admins can manage restaurant data and update/delete orders.
+ *
+ * Data Structure:
+ * - /restaurants/{restaurantId}: Restaurant details (public read, admin write).
+ * - /restaurants/{restaurantId}/menuCategories/{menuCategoryId}/menuItems/{menuItemId}: Menu items (public read, admin write).
+ * - /restaurants/{restaurantId}/orders/{orderId}: Orders. (admin read/list, user create).
+ * - /restaurants/{restaurantId}/orders/{orderId}/orderItems/{orderItemId}: Items within an order.
+ * - /restaurants/{restaurantId}/tables/{tableId}: Table information (public read, admin write).
+ *
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Publicly readable restaurant and menu data. Writes are restricted to admins.
+     */
+    match /restaurants/{restaurantId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn() && isAdmin();
+
+        /**
+         * @description Menu categories are public.
+         */
+        match /menuCategories/{menuCategoryId} {
+          allow get, list: if true;
+          allow create, update, delete: if isSignedIn() && isAdmin();
+
+          /**
+           * @description Menu items are public.
+           */
+          match /menuItems/{menuItemId} {
+            allow get, list: if true;
+            allow create, update, delete: if isSignedIn() && isAdmin();
+          }
+        }
+
+        /**
+         * @description Orders can be created by any signed-in user (including anonymous).
+         * Reading and managing orders is restricted to admins.
+         */
+        match /orders/{orderId} {
+          allow get, list: if isSignedIn() && isAdmin(); // Only admins can read/list orders
+          allow create: if isSignedIn(); // Allow any signed-in user (including anonymous) to create
+          allow update, delete: if isSignedIn() && isAdmin(); // Only admin can update or delete
+          
+          /**
+           * @description Order items follow the parent order's permissions.
+           */
+          match /orderItems/{orderItemId} {
+            allow get, list: if isSignedIn() && isAdmin();
+            allow create: if isSignedIn();
+            allow update, delete: if isSignedIn() && isAdmin();
+          }
+        }
+
+        /**
+         * @description Table data is public.
+         */
+        match /tables/{tableId} {
+          allow get, list: if true;
+          allow create, update, delete: if isSignedIn() && isAdmin();
+        }
+    }
+
+
+    /**
+     * @description Checks if the user is signed in. This can be an anonymous user.
+     * @return {boolean} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    /**
+     * @description Checks if the user is an admin.
+     * @return {boolean} True if the user's email is the admin email, false otherwise.
+     */
+    function isAdmin() {
+      // In a real app, this should check a custom claim, not a hardcoded email.
+      return request.auth != null && request.auth.token.email == "admin@tablebites.com";
+    }
+  }
+}

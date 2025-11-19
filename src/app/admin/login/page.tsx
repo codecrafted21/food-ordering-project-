@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,16 +9,23 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/shared/logo';
 import { Loader2 } from 'lucide-react';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [email, setEmail] = useState('admin@tablebites.com');
   const [password, setPassword] = useState('password');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push('/admin');
+    }
+  }, [user, isUserLoading, router]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,10 +37,7 @@ export default function AdminLoginPage() {
         title: 'Logging In...',
         description: 'You will be redirected shortly.',
       });
-      // The onAuthStateChanged listener in the provider will handle the redirect
-      // For a slightly better UX, we optimistically redirect.
-      // A guard route would be a more robust solution in a real app.
-      router.push('/admin');
+      // The useEffect will handle the redirect once the user state changes.
     } else {
       toast({
         variant: 'destructive',
@@ -43,6 +47,15 @@ export default function AdminLoginPage() {
       setIsLoading(false);
     }
   };
+  
+  if (isUserLoading || user) {
+     return (
+       <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-4">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">

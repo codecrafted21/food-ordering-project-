@@ -1,29 +1,32 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { OrderCard } from './order-card';
 import { updateOrderStatus } from '@/lib/order-manager';
 import type { Order, OrderStatus } from '@/lib/types';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ChefHat, CookingPot, Loader2, Utensils } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { Button } from '@/components/ui/button';
+import { ChefHat, CookingPot, Loader2, LogIn, Utensils } from 'lucide-react';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, Firestore } from 'firebase/firestore';
 
 export default function AdminPageClient() {
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
   const [filter, setFilter] = useState<string[]>(['Preparing', 'Cooking']);
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // IMPORTANT: Only create the query if the user is authenticated
+    if (!firestore || !user) return null;
     
     const restaurantId = "tablebites-restaurant";
-    // This query now fetches all non-served orders
     return query(
         collection(firestore, `restaurants/${restaurantId}/orders`),
         where('status', 'in', ['Preparing', 'Cooking']),
         orderBy('orderDate', 'asc')
     );
-  }, [firestore]);
+  }, [firestore, user]); // Dependency on `user` ensures it re-runs on login
 
   const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
 
@@ -32,11 +35,24 @@ export default function AdminPageClient() {
     updateOrderStatus(firestore, restaurantId, orderId, newStatus);
   };
   
-  if (isLoadingOrders) {
+  if (isUserLoading || (user && isLoadingOrders)) {
     return (
         <div className="flex justify-center items-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="ml-4">Loading Live Orders...</p>
+        </div>
+    )
+  }
+
+  if (!user) {
+    return (
+       <div className="text-center py-16 border-2 border-dashed rounded-lg">
+            <LogIn className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h2 className="text-xl font-semibold mt-4">Authentication Required</h2>
+            <p className="text-muted-foreground mt-2">Please log in to view the live order dashboard.</p>
+            <Button asChild className="mt-4">
+              <Link href="/admin/login">Go to Login</Link>
+            </Button>
         </div>
     )
   }
