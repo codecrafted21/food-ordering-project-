@@ -31,13 +31,13 @@ service cloud.firestore {
 
       /**
        * @description Rules for the 'orders' subcollection.
-       *              - This block handles collection-level queries.
-       *              - Only admins are allowed to list (query) the orders collection.
+       *              - This block handles collection-level queries and document-level access.
        */
       match /orders/{orderId} {
         
         /**
         * @description Rule for listing the entire collection. Admins can list all orders.
+        *              This rule is checked for queries on the 'orders' collection.
         */
         allow list: if isAdmin();
 
