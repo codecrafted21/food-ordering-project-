@@ -30,8 +30,7 @@ service cloud.firestore {
       }
 
       /**
-       * @description Rule for querying the 'orders' collection.
-       *              Only an admin can perform a list operation.
+       * @description Rules for the 'orders' subcollection.
        */
       match /orders/{orderId} {
         
@@ -42,6 +41,12 @@ service cloud.firestore {
         */
         allow get, update, delete: if isAdmin();
         allow create: if isSignedIn();
+
+        /**
+         * @description Rule for listing/querying the 'orders' collection.
+         *              Only an admin can perform a list operation. This rule must be
+         *              on the collection path to work for queries.
+         */
         allow list: if isAdmin();
 
         match /orderItems/{orderItemId} {
