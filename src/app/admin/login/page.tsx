@@ -19,36 +19,31 @@ export default function AdminLoginPage() {
   const { toast } = useToast();
   const [email, setEmail] = useState('admin@tablebites.com');
   const [password, setPassword] = useState('password');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
+    // When user object appears, sign-in is complete. Redirect.
     if (!isUserLoading && user) {
       router.push('/admin');
+    }
+    // If sign-in was attempted but failed, user will remain null.
+    if (!isUserLoading && !user) {
+        setIsSigningIn(false);
     }
   }, [user, isUserLoading, router]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    if (email === 'admin@tablebites.com') {
-      initiateEmailSignIn(auth, email, password);
-      toast({
-        title: 'Logging In...',
-        description: 'You will be redirected shortly.',
-      });
-      // The useEffect will handle the redirect once the user state changes.
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid email or password.',
-      });
-      setIsLoading(false);
-    }
+    setIsSigningIn(true);
+    initiateEmailSignIn(auth, email, password);
+    toast({
+      title: 'Authenticating...',
+      description: 'You will be redirected shortly.',
+    });
   };
-  
-  if (isUserLoading || user) {
+
+  // While checking for a user on initial load, show a loader.
+  if (isUserLoading) {
      return (
        <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -57,6 +52,8 @@ export default function AdminLoginPage() {
     );
   }
 
+  // After initial load, if a user exists, redirect will happen.
+  // Otherwise, show the login form.
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
@@ -91,8 +88,8 @@ export default function AdminLoginPage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full font-bold" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full font-bold" disabled={isSigningIn}>
+                {isSigningIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Login
               </Button>
             </form>
