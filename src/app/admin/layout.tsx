@@ -1,14 +1,27 @@
+'use client';
+
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
 import { LogOut } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = () => {
+    signOut(auth);
+    router.push('/admin/login');
+  }
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-card md:block">
@@ -27,12 +40,10 @@ export default function AdminLayout({
           <div className="w-full flex-1">
             {/* Can add a search bar or other header content here */}
           </div>
-          <Link href="/">
-            <Button variant="outline">
-              <LogOut className="w-4 h-4 mr-2" />
-              Exit Dashboard
-            </Button>
-          </Link>
+          <Button variant="outline" onClick={handleSignOut}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Exit Dashboard
+          </Button>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
           {children}
