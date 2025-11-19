@@ -23,12 +23,8 @@ export default function AdminLayout({
         </div>
       </div>
       <div className="flex flex-col">
-        <header className="flex h-16 items-center justify-between gap-4 border-b bg-card px-4 lg:px-6">
-          <div className="w-full flex-1">
-            <h1 className="font-semibold text-lg">Admin Dashboard</h1>
-          </div>
-        </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
+        {/* The header is now part of the main content area, allowing pages to control their own titles */}
+        <main className="flex flex-1 flex-col bg-background">
           {children}
         </main>
       </div>

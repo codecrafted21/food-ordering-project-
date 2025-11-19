@@ -8,22 +8,24 @@ import { CartSidebar } from '@/components/cart/cart-sidebar';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdminPage = pathname.startsWith('/admin');
+  const isAdminRoute = pathname.startsWith('/admin');
+
+  if (isAdminRoute) {
+    return (
+       <div className="flex min-h-screen flex-col bg-card">
+          <main className="flex-1">{children}</main>
+        </div>
+    )
+  }
 
   return (
     <CartProvider>
-      {isAdminPage ? (
-        <div className="flex min-h-screen flex-col bg-card">
-          <main className="flex-1">{children}</main>
-        </div>
-      ) : (
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <CartSidebar />
-          <main className="flex-1 pt-16 sm:pt-20">{children}</main>
-          <Footer />
-        </div>
-      )}
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <CartSidebar />
+        <main className="flex-1 pt-16 sm:pt-20">{children}</main>
+        <Footer />
+      </div>
     </CartProvider>
   );
 }

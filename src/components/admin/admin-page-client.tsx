@@ -13,14 +13,12 @@ import { collection, query, where, orderBy, Firestore } from 'firebase/firestore
 
 export default function AdminPageClient() {
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const [filter, setFilter] = useState<string[]>(['Preparing', 'Cooking']);
 
-  // Check if the authenticated user is the administrator
   const isAdmin = user?.email === 'admin@tablebites.com';
 
   const ordersQuery = useMemoFirebase(() => {
-    // CRITICAL: Only create the query if the user is a logged-in admin.
     if (!firestore || !isAdmin) return null;
     
     const restaurantId = "tablebites-restaurant";
@@ -29,7 +27,7 @@ export default function AdminPageClient() {
         where('status', 'in', ['Preparing', 'Cooking']),
         orderBy('orderDate', 'asc')
     );
-  }, [firestore, isAdmin]); // Dependency on `isAdmin` ensures it re-runs on login
+  }, [firestore, isAdmin]);
 
   const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
 
@@ -38,30 +36,19 @@ export default function AdminPageClient() {
     updateOrderStatus(firestore, restaurantId, orderId, newStatus);
   };
   
-  if (isUserLoading) {
-    return (
-        <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-4">Authenticating...</p>
-        </div>
-    )
-  }
-
-  // If not an admin (or not logged in), show the login prompt.
   if (!isAdmin) {
     return (
        <div className="text-center py-16 border-2 border-dashed rounded-lg">
             <LogIn className="mx-auto h-12 w-12 text-muted-foreground" />
             <h2 className="text-xl font-semibold mt-4">Admin Access Required</h2>
-            <p className="text-muted-foreground mt-2">Please log in as an administrator to view the dashboard.</p>
+            <p className="text-muted-foreground mt-2">You are not authorized to view this page.</p>
             <Button asChild className="mt-4">
-              <Link href="/admin/login">Go to Login</Link>
+              <Link href="/admin/login">Return to Login</Link>
             </Button>
         </div>
     )
   }
 
-  // If admin is logged in, but orders are still loading.
   if (isLoadingOrders) {
     return (
         <div className="flex justify-center items-center h-64">
