@@ -3,34 +3,21 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAdmin() {
-      // Ensures the user is authenticated and their email is the admin email.
-      return request.auth != null && request.auth.token.email == "admin@tablebites.com";
-    }
-
     match /restaurants/{restaurantId} {
-      // This rule allows an admin to query the 'orders' collection.
-      // This is the key rule that fixes the "Missing or insufficient permissions" error.
-      allow list: if isAdmin();
-      
       // Allow reading of restaurant-level data if needed by the app (publicly or for users)
       allow get: if request.auth != null;
 
       // This block handles operations on INDIVIDUAL order documents.
       match /orders/{orderId} {
-        // Allows an admin to get a single order document.
-        allow get: if isAdmin();
-
         // Allows any authenticated user (including anonymous) to create an order.
         allow create: if request.auth != null;
 
-        // Allows an admin to update or delete a single order document.
-        allow update, delete: if isAdmin();
-
+        // Allow user who created the order to read it.
+        allow get: if request.auth != null && resource.data.userId == request.auth.uid;
+        
         // Rules for the 'orderItems' sub-subcollection
         match /orderItems/{orderItemId} {
-            // Allows admins to read and write, and the user who owns the order to read.
-            allow read, write: if isAdmin();
+            allow read: if request.auth != null && get(/databases/$(database)/documents/restaurants/$(restaurantId)/orders/$(orderId)).data.userId == request.auth.uid;
         }
       }
 

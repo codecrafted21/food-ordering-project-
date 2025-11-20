@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ShoppingCart, User } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/components/cart/cart-provider';
@@ -66,16 +66,6 @@ export default function Header() {
                 </span>
               )}
             </Button>
-            <Link href="/admin">
-              <Button variant="outline" size="sm" className="rounded-full hidden sm:flex">
-                <User className="h-4 w-4 mr-2" />
-                Admin
-              </Button>
-              <Button variant="outline" size="icon" className="rounded-full sm:hidden">
-                 <User className="h-4 w-4" />
-                 <span className="sr-only">Admin</span>
-              </Button>
-            </Link>
           </div>
         </div>
       </div>
