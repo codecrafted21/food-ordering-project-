@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { OrderStatus } from '@/components/order/order-status';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -57,17 +57,18 @@ function OrderTrackingPageContent({ orderId, tableNumber }: { orderId: string, t
   );
 }
 
-function OrderPage({ params }: { params: { id: string } }) {
+function OrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const searchParams = useSearchParams();
   const tableNumber = searchParams.get('table');
 
-  return <OrderTrackingPageContent orderId={params.id} tableNumber={tableNumber} />;
+  return <OrderTrackingPageContent orderId={resolvedParams.id} tableNumber={tableNumber} />;
 }
 
 export default function OrderPageWrapper({ params }: { params: { id: string } }) {
   return (
     <Suspense fallback={<div>Loading order details...</div>}>
-      <OrderPage params={params} />
+      <OrderPage params={Promise.resolve(params)} />
     </Suspense>
   );
 }
