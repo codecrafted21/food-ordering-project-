@@ -3,25 +3,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Public read access for restaurant data, menus, and tables
     match /restaurants/{restaurantId} {
-      // Allow reading of restaurant-level data if needed by the app (publicly or for users)
-      allow get: if request.auth != null;
+      allow get: if true;
 
-      // This block handles operations on INDIVIDUAL order documents.
-      match /orders/{orderId} {
-        // Allows any authenticated user (including anonymous) to create an order.
-        allow create: if request.auth != null;
-
-        // Allow user who created the order to read it.
-        allow get: if request.auth != null && resource.data.userId == request.auth.uid;
-        
-        // Rules for the 'orderItems' sub-subcollection
-        match /orderItems/{orderItemId} {
-            allow read: if request.auth != null && get(/databases/$(database)/documents/restaurants/$(restaurantId)/orders/$(orderId)).data.userId == request.auth.uid;
-        }
-      }
-
-      // Public read access for menus
       match /menuCategories/{menuCategoryId} {
         allow get: if true;
         match /menuItems/{menuItemId} {
@@ -29,9 +14,26 @@ service cloud.firestore {
         }
       }
       
-      // Public read access for tables
       match /tables/{tableId} {
           allow get: if true;
+      }
+    }
+
+    // Rules for the orders subcollection, scoped to a specific restaurant
+    match /restaurants/{restaurantId}/orders/{orderId} {
+      // Any authenticated user can create an order.
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      
+      // Only the user who created the order can read it.
+      allow get: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Rules for the orderItems sub-subcollection
+      match /orderItems/{orderItemId} {
+          // Allow creation of order items if the user is the owner of the parent order.
+          allow create: if request.auth != null && get(/databases/$(database)/documents/restaurants/$(restaurantId)/orders/$(orderId)).data.userId == request.auth.uid;
+          
+          // Allow reading of order items if the user is the owner of the parent order.
+          allow read: if request.auth != null && get(/databases/$(database)/documents/restaurants/$(restaurantId)/orders/$(orderId)).data.userId == request.auth.uid;
       }
     }
   }
