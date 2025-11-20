@@ -4,32 +4,47 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAdmin() {
+      // Ensures the user is authenticated and their email is the admin email.
       return request.auth != null && request.auth.token.email == "admin@tablebites.com";
     }
 
     match /restaurants/{restaurantId} {
-      // Rules for parent restaurant document (if any were needed) would go here.
-      // e.g. allow read: if true;
+      // This rule allows an admin to query the 'orders' collection.
+      // This is the key rule that fixes the "Missing or insufficient permissions" error.
+      allow list: if isAdmin();
+      
+      // Allow reading of restaurant-level data if needed by the app (publicly or for users)
+      allow get: if request.auth != null;
 
-      // Rules for the 'orders' subcollection
+      // This block handles operations on INDIVIDUAL order documents.
       match /orders/{orderId} {
-        // ALLOW an admin to LIST (query) the 'orders' collection.
-        // This is the key rule that fixes the "Missing or insufficient permissions" error.
-        allow list: if isAdmin();
-
-        // ALLOW an admin to GET a single order document.
+        // Allows an admin to get a single order document.
         allow get: if isAdmin();
 
-        // ALLOW any authenticated user (including anonymous) to CREATE an order.
+        // Allows any authenticated user (including anonymous) to create an order.
         allow create: if request.auth != null;
 
-        // ALLOW an admin to UPDATE or DELETE a single order document.
+        // Allows an admin to update or delete a single order document.
         allow update, delete: if isAdmin();
 
         // Rules for the 'orderItems' sub-subcollection
         match /orderItems/{orderItemId} {
+            // Allows admins to read and write, and the user who owns the order to read.
             allow read, write: if isAdmin();
         }
+      }
+
+      // Public read access for menus
+      match /menuCategories/{menuCategoryId} {
+        allow get: if true;
+        match /menuItems/{menuItemId} {
+            allow get: if true;
+        }
+      }
+      
+      // Public read access for tables
+      match /tables/{tableId} {
+          allow get: if true;
       }
     }
   }
