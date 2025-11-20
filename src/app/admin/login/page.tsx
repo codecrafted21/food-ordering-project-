@@ -17,8 +17,8 @@ export default function AdminLoginPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
-  const [email, setEmail] = useState('admin@tablebites.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
